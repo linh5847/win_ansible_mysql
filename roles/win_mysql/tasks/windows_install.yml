@@ -1,0 +1,132 @@
+---
+# - name: Download earthrise.jpg to specified path
+#   win_get_url:
+#     headers:
+#       user-agent: wget
+#     url: https://dev.mysql.com/get/Downloads/MySQLInstaller/mysql-installer-web-community-8.0.39.0.msi
+#     dest: C:\temp\mysql-installer-web-community-8.0.37.0.msi
+
+- name: Check C:\temp folder exist.
+  win_stat:
+    path: C:\temp
+  register: tempdir
+
+# - name: output
+#   debug:
+#     var: tempdir.stat.path
+#   when: tempdir.stat.isdir == True
+
+- name: Create temp directory when it's not existed.
+  win_file:
+    path: C:\temp
+    state: directory
+    mode: 0755
+  when: tempdir.stat.exists == False
+
+- name: Check D:\MySQL directory exist.
+  win_stat:
+    path: D:\MySQL
+  register: mysqldir
+
+- name: Create D:\MySQL directory when it's not existed.
+  win_file:
+    path: D:\MySQL
+    state: directory
+    mode: 0755
+  when: mysqldir.stat.exists == False
+  
+- name: check D:\MySQL\data directory exist.
+  win_stat:
+    path: D:\MySQL\data
+  register: mysqldata
+
+- name: Create D:\MySQL\data directory when it's not existed.
+  win_file:
+    path: D:\MySQL\data
+    state: directory
+    mode: 0755
+  when: mysqldata.stat.exists == False
+
+# Suggest to use win_get_url when your environment have nexus or artifactory, etc.
+- name: Transfer mysql software to target machine.
+  win_copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - { src: 'files/cplusplus_redistrib/latest/vc_redist.x64.exe', dest: 'C:\temp\vc_redist.x64.exe' }
+  - { src: 'files/mysql-installer-web-community-8.0.39.0.msi', dest: 'C:\temp\mysql-installer-web-community-8.0.39.0.msi' }
+
+- name: Install C++ Redistribution for Visual Studio.
+  win_package:
+    path: C:\temp\vc_redist.x64.exe
+    arguments: '/i /quiet INSTALLLEVEL=500'
+    state: present
+  changed_when: False
+  
+- name: Prepare MySQL on Windows.
+  win_package:
+    path: C:\temp\mysql-installer-web-community-8.0.39.0.msi
+    #arguments: "INSTALLDIR=D:\Program Files (x86)\MySQL\MySQL Installer for Windows" 
+    creates_path: 'C:\Program Files (x86)\MySQL\MySQL Installer for Windows'
+    state: present
+  #changed_when: False
+
+# MySQL Data in default C:\ Drive
+# - name: Installing MySQL on Windows.
+#   win_shell: |
+#     $arguments = "server;{{ mysql_version }};x64:*:type=main;open_win_firewall=false;general_log=true;bin_log=true;server_id=3306;tcp_ip=true;port=3306;password={{ mysql_root_password }}"
+#     $mySqlInstallerConsole = "C:\Program Files (x86)\MySQL\MySQL Installer for Windows\MySQLInstallerConsole.exe"
+#     Start-Process -FilePath $mySqlInstallerConsole -ArgumentList community, install, --silent, "$arguments" -Wait -NoNewWindow
+#   changed_when: false
+
+# MySQL Data in D:\ Drive
+- name: Installing MySQL on Windows.
+  win_shell: |
+    $installdir = '"C:\Program Files\MySQL\MySQL Server 8.0"'
+    $datadir = '"D:\MySQL\data"'
+    $arguments = "server;{{ mysql_version }};x64:*:type=main;open_win_firewall=false;general_log=true;bin_log=true;server_id=3306;tcp_ip=true;port=3306;password={{ mysql_root_password }};installdir=$installdir;datadir=$datadir"
+    $mySqlInstallerConsole = "C:\Program Files (x86)\MySQL\MySQL Installer for Windows\MySQLInstallerConsole.exe"
+    Start-Process -FilePath $mySqlInstallerConsole -ArgumentList community, install, --silent, "$arguments" -Wait -NoNewWindow
+  changed_when: False
+
+- name: Making sure MySQL executable is added to PATH (Windows)
+  win_shell: |
+    $theCurrentPath=(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH).Path
+    $theUpdatedPath=$theCurrentPath+';{{ mysql_executable_path }}'
+    Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH –Value $theUpdatedPath
+  changed_when: False
+
+- name: Ensure that '{{ mysql_executable_path }}' on the current user's CLASSPATH
+  ansible.windows.win_path:
+    name: CLASSPATH
+    elements: "{{ mysql_executable_path}} "
+    scope: user
+    state: present
+  register: currentuserpath
+
+- name: Get System PATH
+  raw: '[Environment]::GetEnvironmentVariables("Machine").Path'
+  register: path_out
+  changed_when: False
+
+- name: Modify System PATH
+  raw: SETX /M PATH "$([Environment]::GetEnvironmentVariables("Machine").Path | Out-String);{{ item }}"
+  when: path_out.stdout.find(item) == -1
+  with_items: 
+    - "{{ currentuserpath.path_value }}"
+  register: path_mysql
+
+- name: Check authentication plugin for MySQL root user (Windows)
+  win_command: "\"{{ mysql_executable_path }}\\mysql.exe\" \
+    -s -N -u root -p{{ mysql_root_password }} \
+    -e \"SELECT plugin FROM mysql.user WHERE user = 'root';\""
+  register: query_result
+  changed_when: False
+
+- name: Set authentication plugin type for MySQL root user (Windows)
+  win_command: "\"{{ mysql_executable_path }}\\mysql.exe\" \
+    -s -N -u root -p{{ mysql_root_password }} \
+    -e \"ALTER USER root@localhost IDENTIFIED WITH \
+     {{ mysql_authentication_plugin }} BY '{{ mysql_root_password }}';\""
+  when: query_result.stdout != mysql_authentication_plugin
+  changed_when: False

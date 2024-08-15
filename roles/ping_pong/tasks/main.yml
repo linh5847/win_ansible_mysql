@@ -1,0 +1,12 @@
+---
+# tasks file for some-ansible-role-name
+- name: Test connection
+  win_ping:
+  vars:
+    ansible_winrm_server_cert_validation: ignore
+    
+# - name: Create temp dir
+#   win_file:
+#     path: "{{temp_dir}}"
+#     state: directory
+#     mode: 0755

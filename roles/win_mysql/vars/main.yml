@@ -1,0 +1,22 @@
+---
+# vars file for win_mysql
+mysql_executable_path: C:\Program Files\MySQL\MySQL Server 8.0\bin
+mysql_databases: 
+- testdb1
+- testdb2
+
+users:
+- user1
+- user2
+
+user_passwords:
+- User1P@ssw0rd
+- User2P@ssw0rd
+
+access:
+- SELECT
+- INSERT
+
+hosts:
+- localhost
+- '%'

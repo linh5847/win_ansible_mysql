@@ -1,0 +1,10 @@
+---
+# defaults file for win_mysql
+mysql_version: 8.0.37.0
+mysql_root_password: rootP@ssw0rd
+mysql_port: 3306
+mysql_bind_address: 127.0.0.1
+db_user: admin
+db_pass: AdM~n12345
+mysql_authentication_plugin: mysql_native_password
+#mysql_authentication_plugin: caching_sha2_password

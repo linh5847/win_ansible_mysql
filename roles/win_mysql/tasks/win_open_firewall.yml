@@ -1,0 +1,20 @@
+---
+- name: Firewall rule to allow RDP on TCP port 3306
+  win_firewall_rule:
+    name: MySQL
+    localport: 3306
+    action: allow
+    direction: in
+    protocol: tcp
+    state: present
+    enabled: yes
+
+- name: Firewall rule to allow RPC on TCP port 135
+  win_firewall_rule:
+    name: rpc-default
+    localport: 135
+    action: allow
+    direction: in
+    protocol: tcp
+    state: present
+    enabled: yes

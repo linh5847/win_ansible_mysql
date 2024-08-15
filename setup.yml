@@ -1,0 +1,13 @@
+---
+- name: Setup Windows MySQL.
+  hosts: all
+  gather_facts: false
+  
+  roles:
+  - ping_pong
+  - win_disk_format
+  - win_mysql
+
+  tasks:
+  #- debug: var=hostvars[inventory_hostname]['ansible_all_ipv4_addresses']
+  #- debug: var=hostvars[inventory_hostname]['ansible_all_ipv6_addresses']

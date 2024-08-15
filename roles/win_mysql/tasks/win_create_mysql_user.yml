@@ -1,0 +1,26 @@
+---
+# User access database localhost
+- name: Create MySQL database users on Windows.
+  win_command: "\"{{ mysql_executable_path }}\\mysql.exe\" -u root \
+    -p{{ mysql_root_password }} -e \"CREATE USER '{{ item.0 }}'@'localhost' IDENTIFIED BY '{{ item.1 }}';\""
+  with_together:
+  - "{{ users }}"
+  - "{{ user_passwords }}"
+  register: result
+  failed_when: result.rc != 0 and result.rc != 1
+  changed_when: result.rc != 1
+  check_mode: False
+ 
+
+# User access the database remotely.
+- name: Create MySQL database users on Windows for remote access.
+  win_command: "\"{{ mysql_executable_path }}\\mysql.exe\" -u root \
+    -p{{ mysql_root_password }} -e \"CREATE USER '{{ item.0 }}'@'%' IDENTIFIED BY '{{ item.1 }}';\""
+  with_together:
+  - "{{ users }}"
+  - "{{ user_passwords }}"
+  register: nresult
+  failed_when: nresult.rc != 0 and nresult.rc != 1
+  changed_when: nresult.rc != 1
+  check_mode: False
+  

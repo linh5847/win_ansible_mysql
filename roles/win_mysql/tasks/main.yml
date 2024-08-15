@@ -1,0 +1,21 @@
+---
+# tasks file for win_mysql
+- name: Calling windows_install.yml.
+  include_tasks:
+    file: windows_install.yml
+  
+- name: Calling win_mysql_create_db.yml file.
+  include_tasks:
+    file: win_mysql_create_db.yml
+
+- name: Calling win_create_mysql_user.yml file.
+  include_tasks:
+    file: win_create_mysql_user.yml
+
+- name: Calling win_grant_user_to_mysqldb.yml file.
+  include_tasks:
+    file: win_grant_user_to_mysqldb.yml
+
+- name: Calling win_open_firewall.yml file.
+  include_tasks:
+    file: win_open_firewall.yml

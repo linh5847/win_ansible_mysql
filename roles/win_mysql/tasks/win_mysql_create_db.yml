@@ -1,0 +1,12 @@
+---
+# Windows won't accept mysql_db or mysql_user standard modules.
+- name: Create MySQL databases on Windows.
+  win_command: "\"{{ mysql_executable_path }}\\mysql.exe\" -u root \
+    -p{{ mysql_root_password }} -e \"CREATE DATABASE IF NOT EXISTS {{ item }};\""
+  loop: "{{ mysql_databases }}"
+  changed_when: false
+
+- name: Check the total of MySQL databases.
+  win_command: "\"{{ mysql_executable_path }}\\mysql.exe\" -u root \
+    -p{{ mysql_root_password }} -e \"SHOW DATABASES;\""
+  changed_when: false
